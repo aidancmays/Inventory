@@ -1,0 +1,29 @@
+{
+  "name": "com.aidancmays.inventory",
+  "version": "0.1.0",
+  "displayName": "Inventory",
+  "description": "Items as assets, an inventory of stacks sorted into bags by item category (limited or unlimited, storage, overflow), and souls-like equipment: several weapons per hand with one held, armour, rings, quick items and attuned spells, applying stat modifiers, tags and custom effects while in effect. Save snapshots, an item database and a debug panel included.",
+  "unity": "6000.3",
+  "documentationUrl": "",
+  "keywords": [
+    "rpg",
+    "inventory",
+    "items",
+    "equipment",
+    "souls-like"
+  ],
+  "author": {
+    "name": "Aidan"
+  },
+  "dependencies": {
+    "com.aidancmays.gameplay-tags": "0.1.0",
+    "com.aidancmays.character-stats": "0.1.0"
+  },
+  "samples": [
+    {
+      "displayName": "Equipment",
+      "description": "A character with one of every kind of item, to equip, cycle and use through the debug panel; a ring that adds a glow through a custom EquipEffect.",
+      "path": "Samples~/Equipment"
+    }
+  ]
+}

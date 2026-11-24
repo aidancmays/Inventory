@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 297a598de1d34a79873d9f243a0f63e4
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - profile: {fileID: 11400000, guid: 3f8f19bfb02e461b86e57c8dd8d088f4, type: 2}
+  - database: {fileID: 11400000, guid: a152398e57ef42d49a8c0679c3663d70, type: 2}
+  - health: {fileID: 11400000, guid: a4c7332034314ebfa33c47743b6d1f88, type: 2}
+  - flask: {fileID: 11400000, guid: 6ebb26b8fce7465889faa66c5cd170b5, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

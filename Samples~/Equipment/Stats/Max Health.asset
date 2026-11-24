@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaa7edd67f5fb554cb9d7eeb8094e52e, type: 3}
+  m_Name: Max Health
+  m_EditorClassIdentifier: CharacterStats::CharacterStats.StatDefinition
+  id: 
+  displayName: Max Health
+  inheritsFrom: {fileID: 0}
+  defaultBase: 100
+  hasMin: 1
+  min: 1
+  hasMax: 0
+  max: 0

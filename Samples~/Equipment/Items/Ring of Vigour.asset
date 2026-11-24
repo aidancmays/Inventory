@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71b18a3232a390c4a8309d90838e26a3, type: 3}
+  m_Name: Ring of Vigour
+  m_EditorClassIdentifier: InventorySystem::InventorySystem.RingItem
+  id: 
+  displayName: 
+  description: +20% max health, and a glow, while worn.
+  icon: {fileID: 0}
+  category: {fileID: 11400000, guid: 92ac93b3363249229a663ac3cb6c159f, type: 2}
+  maxStack: 1
+  weight: 0
+  modifiers: 
+  - stat: {fileID: 11400000, guid: d93f2f9bd6e54b22a34b5b3ffb5636aa, type: 2}
+    op: 1
+    value: 0.2
+    scaledBy: {fileID: 0}
+    priority: 0
+    conditions: []
+  tags: []
+  effects: 
+  - rid: 7300000000000000001
+  references:
+    version: 2
+    RefIds:
+    - rid: 7300000000000000001
+      type: {class: GlowWhileWorn, ns: InventorySystem.Samples, asm: Assembly-CSharp}
+      data:
+        color: {r: 1, g: 0.75, b: 0.3, a: 1}
+        range: 4
+        intensity: 2

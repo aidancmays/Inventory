@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 170a6004acaa2c543b8d5e1ecba593a7, type: 3}
+  m_Name: Health
+  m_EditorClassIdentifier: CharacterStats::CharacterStats.PoolDefinition
+  id: 
+  displayName: Health
+  maxStat: {fileID: 11400000, guid: d93f2f9bd6e54b22a34b5b3ffb5636aa, type: 2}
+  restsAt: 0
+  regenStat: {fileID: 0}
+  regenDelayStat: {fileID: 0}
+  canGoNegative: 0
+  overdrawInto: {fileID: 0}
+  overdrawConversionStat: {fileID: 0}
+  whenOverdrawTargetFull: 0
+  costMultiplierStat: {fileID: 0}
+  overflowInto: {fileID: 0}
+  overflowConversionStat: {fileID: 0}
+  overflowDrains: 1
+  fullReleaseFraction: 0.9
+  fullReleaseStat: {fileID: 0}
+  reservedBy: {fileID: 0}
+  tagWhileFull: {fileID: 0}
+  tagWhileOverdrawn: {fileID: 0}
