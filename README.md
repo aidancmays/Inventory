@@ -35,6 +35,8 @@ particle effect...). Effects are `[Serializable]` classes chosen with the list's
   `Cycle(type, direction)`, `UseQuickItem()`, `InHand(hand)`, `SlotChanged`, `SelectionChanged` and `HeldChanged`
   events, `Capture()` / `Restore(snapshot)` (restore the inventory first). In effect: armour and rings while equipped,
   the selected weapon of each hand, the selected spell. Nothing reads input: your input code calls Cycle and UseQuickItem.
+  `StowHands(source)` / `UnstowHands(source)` put both hands' weapons away (while carrying something, say) without
+  changing slots; it isn't synced, so on a networked character call it on every copy from shared state.
 
 ## Asking for changes
 

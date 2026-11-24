@@ -83,6 +83,8 @@ namespace InventorySystem
         readonly bool[] reported = new bool[2];
         readonly StatModifierSpec weightModifier = new StatModifierSpec { op = ModifierOp.Flat };
 
+        readonly HashSet<object> stowers = new HashSet<object>();
+
         StatSheet stats;
         TagHolder tags;
         Inventory inventory;
@@ -103,6 +105,9 @@ namespace InventorySystem
         /// apart from "not reported yet" (only replace a hand's default weapon once a weapon item has been held there).
         /// </summary>
         public event Action<EquipSlotType, ItemStack> HeldChanged;
+
+        /// <summary>HandsStowed changed.</summary>
+        public event Action<bool> HandsStowedChanged;
 
         public Inventory Inventory => inventory;
 
@@ -179,6 +184,13 @@ namespace InventorySystem
         }
 
         // ---- Reading ----
+
+        /// <summary>
+        /// True while something has put the hands away (see StowHands): neither hand holds a weapon, so the held
+        /// weapons' modifiers, tags and effects are off and HeldChanged reports both hands empty. Slots and selections
+        /// are untouched, and the weapons come back out when nothing stows the hands any more.
+        /// </summary>
+        public bool HandsStowed => stowers.Count > 0;
 
         /// <summary>The slots of one type (empty array if the layout has none).</summary>
         public IReadOnlyList<EquipSlot> Slots(EquipSlotType type) => slots[type];
@@ -362,6 +374,26 @@ namespace InventorySystem
         }
 
         // ---- Selecting ----
+
+        /// <summary>
+        /// Puts both hands' weapons away while <paramref name="source"/> wants them away (carrying something, a
+        /// cutscene, climbing). Several sources can stow at once; the weapons come back when the last one unstows.
+        /// Not synced and not saved: on a networked character, call it on every copy from state they all share.
+        /// </summary>
+        public void StowHands(object source)
+        {
+            if (source == null || !stowers.Add(source) || stowers.Count != 1) return;
+            HandsStowedChanged?.Invoke(true);
+            Refresh();
+        }
+
+        /// <summary>Stops <paramref name="source"/> keeping the hands away (see StowHands).</summary>
+        public void UnstowHands(object source)
+        {
+            if (source == null || !stowers.Remove(source) || stowers.Count != 0) return;
+            HandsStowedChanged?.Invoke(false);
+            Refresh();
+        }
 
         /// <summary>Selects a slot of a cycled type (a hand, quick items, spells), even an empty one.</summary>
         public void Select(EquipSlotType type, int index)
@@ -549,8 +581,8 @@ namespace InventorySystem
                 AddAll(EquipSlotType.Legs);
                 AddAll(EquipSlotType.Ring);
 
-                heldWeapon[0] = SelectedSlot(EquipSlotType.RightHand)?.Item;
-                heldWeapon[1] = SelectedSlot(EquipSlotType.LeftHand)?.Item;
+                heldWeapon[0] = HandsStowed ? null : SelectedSlot(EquipSlotType.RightHand)?.Item;
+                heldWeapon[1] = HandsStowed ? null : SelectedSlot(EquipSlotType.LeftHand)?.Item;
                 if (heldWeapon[0] != null) wanted.Add((heldWeapon[0], EquipSlotType.RightHand));
                 if (heldWeapon[1] != null) wanted.Add((heldWeapon[1], EquipSlotType.LeftHand));
 

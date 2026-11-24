@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0] - 2026-11-24
+
+- `Equipment.StowHands(source)` / `UnstowHands(source)`, `HandsStowed`, `HandsStowedChanged`: put both hands' weapons
+  away (nothing held or in effect, HeldChanged reports empty hands) without touching slots or selections, for as long
+  as any source wants. Local to each copy: on a networked character, drive it from synced state.
+
 ## [0.2.0] - 2026-11-24
 
 - `IInventoryRequests` / `InventoryRequests.For(inventory)`: one way to ask for equip, unequip, select, cycle, use,

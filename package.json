@@ -1,6 +1,6 @@
 {
   "name": "com.aidancmays.inventory",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "Inventory",
   "description": "Items as assets, an inventory of stacks sorted into bags by item category (limited or unlimited, storage, overflow), and souls-like equipment: several weapons per hand with one held, armour, rings, quick items and attuned spells, applying stat modifiers, tags and custom effects while in effect. Save snapshots, an item database and a debug panel included, and (with Netcode for GameObjects) a server-authoritative network sync.",
   "unity": "6000.3",
