@@ -36,6 +36,29 @@ particle effect...). Effects are `[Serializable]` classes chosen with the list's
   events, `Capture()` / `Restore(snapshot)` (restore the inventory first). In effect: armour and rings while equipped,
   the selected weapon of each hand, the selected spell. Nothing reads input: your input code calls Cycle and UseQuickItem.
 
+## Asking for changes
+
+Input code and UI should ask through `InventoryRequests.For(inventory)` (an `IInventoryRequests`: `Equip`,
+`EquipAnywhere`, `Unequip`, `Select`, `Cycle`, `UseQuickItem`, `Use`, `Remove`, `Move`, `Give`) rather than call
+Inventory and Equipment directly. Offline it changes them directly; on a networked character it sends the request to
+the server. Reading (bags, stacks, slots, events) is the same either way.
+
+## Multiplayer (Netcode for GameObjects)
+
+With Netcode for GameObjects 2.7+ in the project, the `InventorySystem.Netcode` assembly adds **Network Inventory**. Put
+it next to Inventory and Equipment on a networked character (with a NetworkObject), and give the Inventory an Item
+Database (clients find items by id):
+
+- The server's contents are the real ones. Change them on the server as usual (`Inventory.Add` for a pickup); every
+  change goes to everyone else, whose copies mirror it (`Inventory.Mirror`, `Equipment.Mirror`), so equipment is in
+  effect on every copy (modifiers, tags, EquipEffects, `HeldChanged`). Late joiners get the contents on spawn.
+- The owner asks through `InventoryRequests.For(inventory)` (which finds the Network Inventory); the server checks and
+  makes the change. Don't change a client's copy directly: the next update from the server undoes it.
+- *Consumables Used On*: Owner (when the owner's StatSheet is the real one) uses the item there at once and the server
+  then takes it; Server uses it on the server.
+- `Dropped` (server): items the owner threw away, to put a pickup in the world.
+- *Owner Can Give*: lets the owner add items from the database (the debug panel's Give); development builds always can.
+
 ## Debug panel
 
 Add **Inventory Debug Panel** to the character (editor and development builds; F6 toggles): every slot, every bag,

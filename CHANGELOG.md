@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0] - 2026-11-24
+
+- `IInventoryRequests` / `InventoryRequests.For(inventory)`: one way to ask for equip, unequip, select, cycle, use,
+  remove, move and give that works offline and networked. The Inventory Debug Panel uses it.
+- `Inventory.Mirror(snapshot)` and `Equipment.Mirror(snapshot)`: match a snapshot keeping the stacks that are still
+  there, so only real changes raise events and change what is in effect.
+- `Equipment.UseStartingEquipment` (set false on copies whose equipment comes from elsewhere).
+- `InventorySystem.Netcode` (compiled only with Netcode for GameObjects 2.7+): `NetworkInventory`, the server's
+  inventory and equipment mirrored on every machine, owner requests checked and made by the server, consumables used
+  on the owner or the server, late joiners synced on spawn, `Dropped` event on the server.
+
 ## [0.1.0] - 2026-11-23
 
 - First version, taken from Marcescence.

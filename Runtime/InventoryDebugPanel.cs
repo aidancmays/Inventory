@@ -120,7 +120,8 @@ namespace InventorySystem
             GUILayout.BeginHorizontal();
             GUILayout.Label(heading, label, GUILayout.Width(52f));
 
-            if (cycled && GUILayout.Button("‹", small, GUILayout.Width(18f))) equipment.Cycle(type, -1);
+            IInventoryRequests requests = InventoryRequests.For(equipment.Inventory);
+            if (cycled && GUILayout.Button("‹", small, GUILayout.Width(18f))) requests.Cycle(type, -1);
 
             for (int i = 0; i < slots.Count; i++)
             {
@@ -129,11 +130,11 @@ namespace InventorySystem
                 if (cycled && i == selected) text = "▸" + text;
                 if (type == EquipSlotType.Spell && !slot.IsEmpty && !equipment.IsUsable(slot)) text = "<color=#888888>" + text + "</color>";
 
-                if (GUILayout.Button(text, small) && !slot.IsEmpty) equipment.Unequip(type, i);
+                if (GUILayout.Button(text, small) && !slot.IsEmpty) requests.Unequip(type, i);
             }
 
-            if (cycled && GUILayout.Button("›", small, GUILayout.Width(18f))) equipment.Cycle(type, 1);
-            if (type == EquipSlotType.QuickItem && GUILayout.Button("Use", small, GUILayout.Width(36f)) && !equipment.UseQuickItem())
+            if (cycled && GUILayout.Button("›", small, GUILayout.Width(18f))) requests.Cycle(type, 1);
+            if (type == EquipSlotType.QuickItem && GUILayout.Button("Use", small, GUILayout.Width(36f)) && !requests.UseQuickItem())
                 Say("Nothing to use.");
 
             GUILayout.EndHorizontal();
@@ -141,6 +142,7 @@ namespace InventorySystem
 
         static void DrawBags(Inventory inventory, Equipment equipment)
         {
+            IInventoryRequests requests = InventoryRequests.For(inventory);
             IReadOnlyList<InventoryBag> bags = inventory.Bags;
             for (int b = 0; b < bags.Count; b++)
             {
@@ -166,9 +168,9 @@ namespace InventorySystem
                     string text = stack.ToString();
                     if (equipment != null && equipment.IsEquipped(stack)) text = "<color=#a5d6a7>" + text + "  [E]</color>";
 
-                    if (GUILayout.Button(text, small)) Activate(inventory, equipment, stack);
-                    if (GUILayout.Button("−", small, GUILayout.Width(20f))) inventory.Remove(stack, 1);
-                    if (next != null && GUILayout.Button("→", small, GUILayout.Width(20f)) && inventory.Move(stack, next) == 0)
+                    if (GUILayout.Button(text, small)) Activate(requests, equipment, stack);
+                    if (GUILayout.Button("−", small, GUILayout.Width(20f))) requests.Remove(stack, 1);
+                    if (next != null && GUILayout.Button("→", small, GUILayout.Width(20f)) && requests.Move(stack, next) == 0)
                         Say($"{next.DisplayName} can't take {stack.Item.DisplayName}.");
 
                     GUILayout.EndHorizontal();
@@ -194,11 +196,11 @@ namespace InventorySystem
             foreach (ItemDefinition item in database.Items)
             {
                 if (item == null) continue;
-                if (GUILayout.Button("+ " + item.DisplayName, small) && inventory.Add(item) == 0) Say($"No room for {item.DisplayName}.");
+                if (GUILayout.Button("+ " + item.DisplayName, small) && InventoryRequests.For(inventory).Give(item) == 0) Say($"No room for {item.DisplayName}.");
             }
         }
 
-        static void Activate(Inventory inventory, Equipment equipment, ItemStack stack)
+        static void Activate(IInventoryRequests requests, Equipment equipment, ItemStack stack)
         {
             if (stack.Bag.IsStorage)
             {
@@ -214,15 +216,10 @@ namespace InventorySystem
                     return;
                 }
 
-                if (equipment.EquipAnywhere(stack)) return;
+                if (requests.EquipAnywhere(stack)) return;
             }
 
-            var consumable = stack.Item as ConsumableItem;
-            if (consumable != null && consumable.Use(inventory.gameObject))
-            {
-                if (consumable.ConsumedOnUse) inventory.Remove(stack, 1);
-                return;
-            }
+            if (stack.Item is ConsumableItem && requests.Use(stack)) return;
 
             Say($"{stack.Item.DisplayName} can't be equipped.");
         }

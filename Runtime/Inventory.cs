@@ -359,5 +359,68 @@ namespace InventorySystem
                 CreateStack(bag, item, Mathf.Max(1, saved.count), saved.instance);
             }
         }
+
+        /// <summary>
+        /// Makes the contents match a snapshot, keeping the stacks that are still there (same instance id) instead of
+        /// emptying the bags first like Restore does, so equipment pointing at them stays put and only real changes
+        /// raise StackChanged. For a copy kept in step with an inventory somewhere else (a networked player): the
+        /// snapshot is taken as it is, without checking bag rules or space. Mirror Equipment after this.
+        /// </summary>
+        public void Mirror(InventorySnapshot snapshot, ItemDatabase itemDatabase = null)
+        {
+            if (snapshot == null) return;
+
+            itemDatabase ??= database;
+            if (itemDatabase == null)
+            {
+                Debug.LogError($"{name}: Inventory.Mirror needs an Item Database to find items by id.", this);
+                return;
+            }
+
+            var order = new Dictionary<ItemStack, int>();
+            foreach (InventorySnapshot.Stack saved in snapshot.stacks)
+            {
+                ItemDefinition item = itemDatabase.Find(saved.item);
+                if (item == null)
+                {
+                    Debug.LogWarning($"{name}: item '{saved.item}' is not in the item database; skipped.", this);
+                    continue;
+                }
+
+                InventoryBag bag = GetBag(saved.bag) ?? HomeOf(item);
+                if (bag == null) continue;
+
+                int count = Mathf.Max(1, saved.count);
+                ItemStack stack = Find(saved.instance);
+                if (stack != null && stack.Item == item && !order.ContainsKey(stack))
+                {
+                    int previous = stack.Count;
+                    bool moved = stack.Bag != bag;
+                    if (moved)
+                    {
+                        stack.Bag.List.Remove(stack);
+                        stack.Bag = bag;
+                        bag.List.Add(stack);
+                    }
+                    stack.Count = count;
+                    if (moved || previous != count) StackChanged?.Invoke(stack, previous);
+                }
+                else
+                {
+                    stack = CreateStack(bag, item, count, saved.instance);
+                }
+
+                order[stack] = order.Count;
+            }
+
+            foreach (InventoryBag bag in bags)
+            {
+                for (int i = bag.List.Count - 1; i >= 0; i--)
+                {
+                    if (!order.ContainsKey(bag.List[i])) Remove(bag.List[i], int.MaxValue);
+                }
+                bag.List.Sort((a, b) => order[a].CompareTo(order[b]));
+            }
+        }
     }
 }

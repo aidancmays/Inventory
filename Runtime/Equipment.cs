@@ -142,10 +142,17 @@ namespace InventorySystem
             if (stats != null) stats.StatChanged -= HandleStatChanged;
         }
 
+        /// <summary>
+        /// Equip the Starting Equipment in Start. Set it false before Start on a copy whose equipment comes from
+        /// somewhere else (a networked player mirroring the server's), or it would equip its own.
+        /// </summary>
+        public bool UseStartingEquipment { get; set; } = true;
+
         void Start()
         {
             foreach (StartingItem entry in startingEquipment)
             {
+                if (!UseStartingEquipment) break;
                 if (entry.item == null) continue;
 
                 ItemStack stack = FindUnequipped(entry.item);
@@ -448,6 +455,41 @@ namespace InventorySystem
             foreach (EquipmentSnapshot.Selection saved in snapshot.selected)
             {
                 if (IsCycled(saved.type) && Get(saved.type, saved.index) != null) SetSelected(saved.type, saved.index);
+            }
+
+            Refresh();
+        }
+
+        /// <summary>
+        /// Makes the slots and selections match a snapshot, changing only the slots that differ, without the checks
+        /// Equip makes: for a copy kept in step with equipment somewhere else (a networked player). Mirror the
+        /// Inventory first. What is in effect then changes by the difference only.
+        /// </summary>
+        public void Mirror(EquipmentSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+
+            var wantedSlots = new Dictionary<EquipSlot, ItemStack>();
+            foreach (EquipmentSnapshot.Slot saved in snapshot.slots)
+            {
+                EquipSlot slot = Get(saved.type, saved.index);
+                ItemStack stack = inventory.Find(saved.instance);
+                if (slot != null && stack != null) wantedSlots[slot] = stack;
+            }
+
+            foreach (EquipSlot[] array in slots.Values)
+            {
+                foreach (EquipSlot slot in array)
+                {
+                    wantedSlots.TryGetValue(slot, out ItemStack stack);
+                    if (slot.Item != stack) SetSlot(slot, stack);
+                }
+            }
+
+            foreach (EquipmentSnapshot.Selection saved in snapshot.selected)
+            {
+                if (IsCycled(saved.type) && Get(saved.type, saved.index) != null && Selected(saved.type) != saved.index)
+                    SetSelected(saved.type, saved.index);
             }
 
             Refresh();

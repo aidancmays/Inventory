@@ -1,0 +1,25 @@
+{
+    "name": "InventorySystem.Netcode",
+    "rootNamespace": "InventorySystem.Netcode",
+    "references": [
+        "InventorySystem",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "INVENTORY_NETCODE"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.netcode.gameobjects",
+            "expression": "2.7.0",
+            "define": "INVENTORY_NETCODE"
+        }
+    ],
+    "noEngineReferences": false
+}
