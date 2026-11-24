@@ -29,7 +29,7 @@ particle effect...). Effects are `[Serializable]` classes chosen with the list's
 
 - **Inventory**: bags in priority order, each taking some categories (and their descendants; none = everything),
   limited to some spaces or unlimited, optionally storage (never equipped from), with an overflow bag. `Add`, `Remove`,
-  `Move`, `Count`, `Has`, `FindAll`, `RoomFor`, a `StackChanged` event, and `Capture()` / `Restore(snapshot, database)`.
+  `Move`, `Reorder` (a stack to another place in its bag), `Count`, `Has`, `FindAll`, `RoomFor`, a `StackChanged` event, and `Capture()` / `Restore(snapshot, database)`.
 - **Equipment** (next to Inventory, and a StatSheet if the character has stats): slot counts per type in *Layout*,
   starting equipment, optional attunement and equip-weight stats. `Equip`, `EquipAnywhere`, `Unequip`, `Select`,
   `Cycle(type, direction)`, `UseQuickItem()`, `InHand(hand)`, `SlotChanged`, `SelectionChanged` and `HeldChanged`
@@ -41,7 +41,7 @@ particle effect...). Effects are `[Serializable]` classes chosen with the list's
 ## Asking for changes
 
 Input code and UI should ask through `InventoryRequests.For(inventory)` (an `IInventoryRequests`: `Equip`,
-`EquipAnywhere`, `Unequip`, `Select`, `Cycle`, `UseQuickItem`, `Use`, `Remove`, `Move`, `Give`) rather than call
+`EquipAnywhere`, `Unequip`, `Select`, `Cycle`, `UseQuickItem`, `Use`, `Remove`, `Move`, `Reorder`, `Give`) rather than call
 Inventory and Equipment directly. Offline it changes them directly; on a networked character it sends the request to
 the server. Reading (bags, stacks, slots, events) is the same either way.
 

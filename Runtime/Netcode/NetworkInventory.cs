@@ -240,6 +240,15 @@ namespace InventorySystem.Netcode
             return Mathf.Min(count, stack.Count);
         }
 
+        public bool Reorder(ItemStack stack, int index)
+        {
+            if (Direct) return inventory.Reorder(stack, index);
+            if (!CanAsk || !inventory.Contains(stack)) return false;
+
+            ReorderRpc(stack.InstanceId, index, ++sent);
+            return true;
+        }
+
         public int Give(ItemDefinition item, int count = 1)
         {
             if (item == null || count <= 0) return 0;
@@ -323,6 +332,14 @@ namespace InventorySystem.Netcode
             ItemStack stack = inventory.Find(instance);
             InventoryBag to = inventory.GetBag(bag);
             if (stack != null && to != null) inventory.Move(stack, to, count);
+            Handled(request);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void ReorderRpc(string instance, int index, int request)
+        {
+            ItemStack stack = inventory.Find(instance);
+            if (stack != null) inventory.Reorder(stack, index);
             Handled(request);
         }
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0] - 2026-11-24
+
+- `Inventory.Reorder(stack, index)`: move a stack to another place in its own bag (index clamped, so past the end puts
+  it last). Raises `StackChanged` with the count unchanged. Also `IInventoryRequests.Reorder` (local, and an owner
+  request on `NetworkInventory`).
+- `Inventory.Mirror` follows order changes and raises `StackChanged` for stacks that only moved place, so a copy's UI
+  redraws.
+- Fix: an equipped item marked Only One Equipped can move to another slot (it used to count itself as already equipped).
+
 ## [0.3.0] - 2026-11-24
 
 - `Equipment.StowHands(source)` / `UnstowHands(source)`, `HandsStowed`, `HandsStowedChanged`: put both hands' weapons

@@ -300,7 +300,7 @@ namespace InventorySystem
             else if (!inventory.Contains(stack)) reason = "it is not in the inventory";
             else if (stack.Bag.IsStorage) reason = "it is in storage";
             else if (!stack.Item.CanGoIn(type)) reason = $"{stack.Item.DisplayName} can't go in {type}";
-            else if (stack.Item is EquipmentItem equipment && equipment.OnlyOneEquipped && HoldsOther(stack.Item, slot)) reason = $"{stack.Item.DisplayName} is already equipped";
+            else if (stack.Item is EquipmentItem equipment && equipment.OnlyOneEquipped && HoldsOther(stack, slot)) reason = $"{stack.Item.DisplayName} is already equipped";
             else if (type == EquipSlotType.Spell && !IsInSpellSlot(stack)
                      && AttunementUsed - CostOf(slot.Item) + CostOf(stack) > AttunementCapacity) reason = "not enough attunement";
 
@@ -695,13 +695,14 @@ namespace InventorySystem
             if (equipWeightStat != null) stats.AddModifier(weightModifier, this);
         }
 
-        bool HoldsOther(ItemDefinition item, EquipSlot except)
+        /// <summary>Is another stack of the same item in a slot other than except? (The stack itself may move.)</summary>
+        bool HoldsOther(ItemStack stack, EquipSlot except)
         {
             foreach (EquipSlot[] array in slots.Values)
             {
                 foreach (EquipSlot slot in array)
                 {
-                    if (slot != except && slot.Item != null && slot.Item.Item == item) return true;
+                    if (slot != except && slot.Item != null && slot.Item != stack && slot.Item.Item == stack.Item) return true;
                 }
             }
             return false;

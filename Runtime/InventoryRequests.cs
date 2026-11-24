@@ -31,6 +31,9 @@ namespace InventorySystem
 
         int Move(ItemStack stack, InventoryBag to, int count = int.MaxValue);
 
+        /// <summary>Moves a stack to another place in its own bag (see Inventory.Reorder).</summary>
+        bool Reorder(ItemStack stack, int index);
+
         /// <summary>Adds items out of nowhere (debug panels, cheats).</summary>
         int Give(ItemDefinition item, int count = 1);
     }
@@ -106,6 +109,7 @@ namespace InventorySystem
             public bool Use(ItemStack stack) => UseHere(inventory, stack);
             public int Remove(ItemStack stack, int count = 1) => inventory.Remove(stack, count);
             public int Move(ItemStack stack, InventoryBag to, int count = int.MaxValue) => inventory.Move(stack, to, count);
+            public bool Reorder(ItemStack stack, int index) => inventory.Reorder(stack, index);
             public int Give(ItemDefinition item, int count = 1) => inventory.Add(item, count);
         }
     }

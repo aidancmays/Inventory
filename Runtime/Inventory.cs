@@ -36,7 +36,8 @@ namespace InventorySystem
 
         /// <summary>
         /// (stack, its previous count). Raised when a stack is created (previous 0), grows, shrinks, is emptied
-        /// (Count 0, Bag null) or is moved to another bag (Count unchanged; read Bag).
+        /// (Count 0, Bag null), is moved to another bag (Count unchanged; read Bag) or to another place in its bag
+        /// (Count unchanged; see Reorder).
         /// </summary>
         public event Action<ItemStack, int> StackChanged;
 
@@ -236,6 +237,25 @@ namespace InventorySystem
             return moved;
         }
 
+        /// <summary>
+        /// Moves a stack to another place in its own bag: it ends up at index (clamped to the bag, so anything past
+        /// the end puts it last) and the stacks in between shift along. Returns false if nothing moved.
+        /// </summary>
+        public bool Reorder(ItemStack stack, int index)
+        {
+            if (!Contains(stack)) return false;
+
+            List<ItemStack> list = stack.Bag.List;
+            int from = list.IndexOf(stack);
+            int to = Mathf.Clamp(index, 0, list.Count - 1);
+            if (from == to) return false;
+
+            list.RemoveAt(from);
+            list.Insert(to, stack);
+            StackChanged?.Invoke(stack, stack.Count);
+            return true;
+        }
+
         /// <summary>Empties every bag.</summary>
         public void Clear()
         {
@@ -378,6 +398,7 @@ namespace InventorySystem
             }
 
             var order = new Dictionary<ItemStack, int>();
+            var changed = new HashSet<ItemStack>();
             foreach (InventorySnapshot.Stack saved in snapshot.stacks)
             {
                 ItemDefinition item = itemDatabase.Find(saved.item);
@@ -403,11 +424,16 @@ namespace InventorySystem
                         bag.List.Add(stack);
                     }
                     stack.Count = count;
-                    if (moved || previous != count) StackChanged?.Invoke(stack, previous);
+                    if (moved || previous != count)
+                    {
+                        changed.Add(stack);
+                        StackChanged?.Invoke(stack, previous);
+                    }
                 }
                 else
                 {
                     stack = CreateStack(bag, item, count, saved.instance);
+                    changed.Add(stack);
                 }
 
                 order[stack] = order.Count;
@@ -419,7 +445,16 @@ namespace InventorySystem
                 {
                     if (!order.ContainsKey(bag.List[i])) Remove(bag.List[i], int.MaxValue);
                 }
+
+                var before = new List<ItemStack>(bag.List);
                 bag.List.Sort((a, b) => order[a].CompareTo(order[b]));
+
+                // Only the order changed (Reorder on the original): say so for the stacks that moved.
+                for (int i = 0; i < before.Count; i++)
+                {
+                    ItemStack stack = bag.List[i];
+                    if (stack != before[i] && changed.Add(stack)) StackChanged?.Invoke(stack, stack.Count);
+                }
             }
         }
     }
