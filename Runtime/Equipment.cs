@@ -9,8 +9,10 @@ namespace InventorySystem
     /// <summary>
     /// A character's souls-like equipment slots: weapons for each hand (several, one held at a time), head, chest,
     /// hands and legs armour, rings, quick items and attuned spells. How many of each is set in Layout.
-    /// Slots hold stacks from the character's Inventory; an item stays in its bag while equipped, and is unequipped
-    /// if it leaves the inventory (used up, dropped, moved to storage).
+    /// Slots hold stacks from the character's Inventory, and an item is unequipped if it leaves the inventory (used
+    /// up, dropped, moved to storage). By default an item stays in its bag while equipped. With Equipped Items Leave
+    /// The Bag on, equipping takes it out of its bag (into a hidden Equipped bag) so the slot is its place: it frees
+    /// its bag space, what it replaces goes back there, and unequipping needs room in a bag.
     ///
     /// What is in effect (see EquipmentItem): armour and rings while equipped; the selected weapon of each hand;
     /// the selected spell. Their stat modifiers go on the StatSheet (if there is one) and their tags onto the
@@ -70,6 +72,11 @@ namespace InventorySystem
 
         [SerializeField] List<StartingItem> startingEquipment = new List<StartingItem>();
 
+        [Tooltip("On: equipping takes an item out of its bag, so a slot is its own place (kept in a hidden Equipped bag " +
+                 "on the Inventory, added if there is none). What it replaces goes back to the space it left; " +
+                 "unequipping puts it in a bag and is refused when there is no room. Off: equipped items stay in their bags.")]
+        [SerializeField] bool equippedItemsLeaveTheBag;
+
         static readonly EquipSlotType[] AllTypes = (EquipSlotType[])Enum.GetValues(typeof(EquipSlotType));
 
         readonly Dictionary<EquipSlotType, EquipSlot[]> slots = new Dictionary<EquipSlotType, EquipSlot[]>();
@@ -88,6 +95,7 @@ namespace InventorySystem
         StatSheet stats;
         TagHolder tags;
         Inventory inventory;
+        InventoryBag equippedBag;
         bool started;
         bool refreshing;
         bool refreshQueued;
@@ -111,6 +119,11 @@ namespace InventorySystem
 
         public Inventory Inventory => inventory;
 
+        /// <summary>Equipped items are taken out of their bags (see the field's tooltip).</summary>
+        public bool EquippedItemsLeaveTheBag => equippedItemsLeaveTheBag;
+
+        bool Leaves => equippedBag != null;
+
         /// <summary>Total weight of everything equipped, in any slot.</summary>
         public float EquippedWeight { get; private set; }
 
@@ -125,6 +138,7 @@ namespace InventorySystem
             stats = GetComponent<StatSheet>();
             tags = TagHolder.On(this);
             inventory = GetComponent<Inventory>();
+            if (equippedItemsLeaveTheBag) equippedBag = inventory.EnsureEquippedBag();
 
             foreach (EquipSlotType type in AllTypes)
             {
@@ -303,6 +317,7 @@ namespace InventorySystem
             else if (stack.Item is EquipmentItem equipment && equipment.OnlyOneEquipped && HoldsOther(stack, slot)) reason = $"{stack.Item.DisplayName} is already equipped";
             else if (type == EquipSlotType.Spell && !IsInSpellSlot(stack)
                      && AttunementUsed - CostOf(slot.Item) + CostOf(stack) > AttunementCapacity) reason = "not enough attunement";
+            else if (Leaves && !DisplacedGoes(stack, slot, out _, out _, out _)) reason = $"there is no room for {slot.Item.Item.DisplayName}";
 
             return reason == null;
         }
@@ -312,6 +327,10 @@ namespace InventorySystem
         /// <summary>
         /// Puts a stack in a slot, replacing what was there. A stack already in another slot moves. In a cycled type
         /// whose selected slot is empty, the new slot becomes the selected one.
+        ///
+        /// With Equipped Items Leave The Bag, the stack leaves its bag, and what it replaces goes to the slot the stack
+        /// came from (if it fits there), else to the bag space the stack left (if that bag takes it), else to the
+        /// first bag with room; with nowhere to go, nothing is equipped.
         /// </summary>
         public bool Equip(ItemStack stack, EquipSlotType type, int index, out string reason)
         {
@@ -320,10 +339,26 @@ namespace InventorySystem
             EquipSlot slot = Get(type, index);
             if (slot.Item == stack) return true;
 
+            ItemStack displaced = slot.Item;
             EquipSlot previous = SlotOf(stack);
-            if (previous != null) SetSlot(previous, null);
 
-            SetSlot(slot, stack);
+            if (Leaves)
+            {
+                DisplacedGoes(stack, slot, out EquipSlot toSlot, out InventoryBag toBag, out int toIndex);
+
+                if (previous != null) SetSlot(previous, null);
+                else if (stack.Bag != equippedBag) inventory.Relocate(stack, equippedBag, int.MaxValue);
+                SetSlot(slot, stack);
+
+                if (displaced != null && toSlot != null) SetSlot(toSlot, displaced);
+                else if (displaced != null) inventory.Relocate(displaced, toBag, toIndex);
+            }
+            else
+            {
+                if (previous != null) SetSlot(previous, null);
+                SetSlot(slot, stack);
+            }
+
             if (IsCycled(type) && SelectedSlot(type).IsEmpty) SetSelected(type, index);
 
             Refresh();
@@ -358,13 +393,67 @@ namespace InventorySystem
             return fallback != null && Equip(stack, fallback.Type, fallback.Index);
         }
 
+        /// <summary>
+        /// Empties a slot. With Equipped Items Leave The Bag the item goes into the first bag with room for it, and
+        /// stays equipped if there is none (see UnequipInto).
+        /// </summary>
         public void Unequip(EquipSlotType type, int index)
         {
             EquipSlot slot = Get(type, index);
             if (slot == null || slot.IsEmpty) return;
 
+            if (Leaves)
+            {
+                UnequipInto(type, index, null, int.MaxValue);
+                return;
+            }
+
             SetSlot(slot, null);
             Refresh();
+        }
+
+        /// <summary>
+        /// Takes the item out of a slot into a bag at a space (bagIndex; past the end = last; bag null = the first
+        /// bag with room). Only with Equipped Items Leave The Bag; otherwise the same as Unequip. If the bag is full,
+        /// the item swaps with the stack at that space, which goes into the slot if it fits there. Returns false (and
+        /// changes nothing) when the item has nowhere to go.
+        /// </summary>
+        public bool UnequipInto(EquipSlotType type, int index, InventoryBag bag, int bagIndex)
+        {
+            EquipSlot slot = Get(type, index);
+            if (slot == null || slot.IsEmpty) return false;
+
+            if (!Leaves)
+            {
+                SetSlot(slot, null);
+                Refresh();
+                return true;
+            }
+
+            ItemStack stack = slot.Item;
+            if (bag == null) bag = inventory.BagWithRoomFor(stack.Item);
+            if (bag == null || bag.HoldsEquipped || inventory.GetBag(bag.Id) != bag) return false;
+            if (!bag.IsStorage && !bag.Accepts(stack.Item)) return false;
+
+            if (!bag.IsFull)
+            {
+                SetSlot(slot, null);
+                inventory.Relocate(stack, bag, bagIndex);
+                Refresh();
+                return true;
+            }
+
+            // Full: swap with the stack at that space, if it can take the slot.
+            if (bag.IsStorage || bagIndex < 0 || bagIndex >= bag.Stacks.Count) return false;
+            ItemStack other = bag.Stacks[bagIndex];
+            if (!Fits(other, slot)) return false;
+
+            SetSlot(slot, null);
+            inventory.Relocate(stack, bag, bagIndex);
+            inventory.Relocate(other, equippedBag, int.MaxValue);
+            SetSlot(slot, other);
+            Refresh();
+            return true;
         }
 
         public void Unequip(ItemStack stack)
@@ -489,6 +578,7 @@ namespace InventorySystem
                 if (IsCycled(saved.type) && Get(saved.type, saved.index) != null) SetSelected(saved.type, saved.index);
             }
 
+            if (Leaves) Tidy();
             Refresh();
         }
 
@@ -541,10 +631,78 @@ namespace InventorySystem
             SelectionChanged?.Invoke(type, index);
         }
 
+        /// <summary>
+        /// After Restore (a save from before Equipped Items Leave The Bag, or one that does not match): equipped
+        /// stacks into the Equipped bag, anything else there back into a bag.
+        /// </summary>
+        void Tidy()
+        {
+            foreach (EquipSlot[] array in slots.Values)
+            {
+                foreach (EquipSlot slot in array)
+                {
+                    if (!slot.IsEmpty && slot.Item.Bag != equippedBag) inventory.Relocate(slot.Item, equippedBag, int.MaxValue);
+                }
+            }
+
+            for (int i = equippedBag.Stacks.Count - 1; i >= 0; i--)
+            {
+                ItemStack stack = equippedBag.Stacks[i];
+                if (IsEquipped(stack)) continue;
+
+                InventoryBag bag = inventory.BagWithRoomFor(stack.Item);
+                if (bag != null) inventory.Relocate(stack, bag, int.MaxValue);
+                else Debug.LogWarning($"{name}: no room for unequipped '{stack.Item.DisplayName}'; it stays with the equipped items.", this);
+            }
+        }
+
+        /// <summary>Where the item in slot goes when stack takes its place. False: nowhere.</summary>
+        bool DisplacedGoes(ItemStack stack, EquipSlot slot, out EquipSlot toSlot, out InventoryBag toBag, out int toIndex)
+        {
+            toSlot = null;
+            toBag = null;
+            toIndex = int.MaxValue;
+
+            ItemStack displaced = slot.Item;
+            if (displaced == null || displaced == stack) return true;
+
+            EquipSlot from = SlotOf(stack);
+            if (from != null)
+            {
+                if (Fits(displaced, from))
+                {
+                    toSlot = from;
+                    return true;
+                }
+            }
+            else if (stack.Bag != null && !stack.Bag.HoldsEquipped && !stack.Bag.IsStorage && stack.Bag.Accepts(displaced.Item))
+            {
+                // Into the space the stack leaves.
+                toBag = stack.Bag;
+                toIndex = inventory.IndexOf(stack);
+                return true;
+            }
+
+            toBag = inventory.BagWithRoomFor(displaced.Item);
+            return toBag != null;
+        }
+
+        /// <summary>Could the stack sit in that slot (ignoring attunement)?</summary>
+        bool Fits(ItemStack stack, EquipSlot slot)
+        {
+            if (stack == null || !stack.Item.CanGoIn(slot.Type)) return false;
+            return !(stack.Item is EquipmentItem equipment && equipment.OnlyOneEquipped && HoldsOther(stack, slot));
+        }
+
         void HandleStackChanged(ItemStack stack, int previousCount)
         {
+            if (Leaves)
+            {
+                // An equipped stack lives in the Equipped bag: gone, or moved out by something else, it is unequipped.
+                if (stack.Count > 0 && stack.Bag == equippedBag) return;
+            }
             // Gone from the inventory, or put in storage: it can't stay equipped.
-            if (stack.Count > 0 && stack.Bag != null && !stack.Bag.IsStorage) return;
+            else if (stack.Count > 0 && stack.Bag != null && !stack.Bag.IsStorage) return;
 
             EquipSlot slot = SlotOf(stack);
             if (slot == null) return;

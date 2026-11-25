@@ -80,15 +80,48 @@ namespace InventorySystem
             return null;
         }
 
-        /// <summary>The bag an item goes in when picked up: the first non-storage bag that takes it. Null if none does.</summary>
+        /// <summary>
+        /// The bag an item goes in when picked up: the first bag that takes it and is neither storage nor the Equipped
+        /// bag. Null if none does.
+        /// </summary>
         public InventoryBag HomeOf(ItemDefinition item)
         {
             foreach (InventoryBag bag in bags)
             {
-                if (!bag.IsStorage && bag.Accepts(item)) return bag;
+                if (!bag.IsStorage && !bag.HoldsEquipped && bag.Accepts(item)) return bag;
             }
             return null;
         }
+
+        /// <summary>
+        /// The bag that holds equipped items (see Equipment.EquippedItemsLeaveTheBag), or null when equipped items
+        /// stay in their bags.
+        /// </summary>
+        public InventoryBag EquippedBag
+        {
+            get
+            {
+                foreach (InventoryBag bag in bags)
+                {
+                    if (bag.HoldsEquipped) return bag;
+                }
+                return null;
+            }
+        }
+
+        /// <summary>The first bag on the item's way in (its home, then overflow) with a free space. Null if none.</summary>
+        public InventoryBag BagWithRoomFor(ItemDefinition item)
+        {
+            var visited = new HashSet<InventoryBag>();
+            for (InventoryBag bag = HomeOf(item); bag != null && visited.Add(bag); bag = NextOverflow(bag, item))
+            {
+                if (!bag.IsFull) return bag;
+            }
+            return null;
+        }
+
+        /// <summary>Where a stack is in its bag (-1 if it is in none of this inventory's bags).</summary>
+        public int IndexOf(ItemStack stack) => Contains(stack) ? stack.Bag.List.IndexOf(stack) : -1;
 
         /// <summary>How many of the item are carried (storage bags not counted unless asked).</summary>
         public int Count(ItemDefinition item, bool includeStorage = false)
@@ -134,10 +167,19 @@ namespace InventorySystem
             }
         }
 
-        /// <summary>How many more of the item would fit, counting overflow bags.</summary>
+        /// <summary>How many more of the item would fit, counting overflow bags (and equipped stacks of it).</summary>
         public int RoomFor(ItemDefinition item)
         {
             long room = 0;
+            InventoryBag equippedBag = EquippedBag;
+            if (equippedBag != null && item != null && item.Stacks)
+            {
+                foreach (ItemStack stack in equippedBag.List)
+                {
+                    if (stack.Item == item) room += stack.Room;
+                }
+            }
+
             var visited = new HashSet<InventoryBag>();
             for (InventoryBag bag = HomeOf(item); bag != null && visited.Add(bag); bag = NextOverflow(bag, item))
             {
@@ -149,19 +191,24 @@ namespace InventorySystem
 
         // ---- Changing ----
 
-        /// <summary>Picks up items. Returns how many went in (less than count when the bags are full).</summary>
+        /// <summary>
+        /// Picks up items. Returns how many went in (less than count when the bags are full). Equipped stacks of the
+        /// item are topped up first (when equipped items have their own bag), then its home bag and overflow.
+        /// </summary>
         public int Add(ItemDefinition item, int count = 1)
         {
             if (item == null || count <= 0) return 0;
+
+            int left = count - TopUp(EquippedBag, item, count);
+            if (left <= 0) return count;
 
             InventoryBag bag = HomeOf(item);
             if (bag == null)
             {
                 Debug.LogWarning($"{name}: no inventory bag takes '{item.DisplayName}' (category {(item.Category != null ? item.Category.name : "none")}).", this);
-                return 0;
+                return count - left;
             }
 
-            int left = count;
             var visited = new HashSet<InventoryBag>();
             while (bag != null && left > 0 && visited.Add(bag))
             {
@@ -214,7 +261,7 @@ namespace InventorySystem
         /// </summary>
         public int Move(ItemStack stack, InventoryBag to, int count = int.MaxValue)
         {
-            if (!Contains(stack) || to == null || to == stack.Bag || !bags.Contains(to)) return 0;
+            if (!Contains(stack) || to == null || to == stack.Bag || !bags.Contains(to) || to.HoldsEquipped) return 0;
             if (!to.IsStorage && !to.Accepts(stack.Item)) return 0;
 
             count = Mathf.Min(count, stack.Count);
@@ -256,6 +303,36 @@ namespace InventorySystem
             return true;
         }
 
+        /// <summary>
+        /// For Equipment: moves a whole stack, as it is (same InstanceId, never merged), to a place in another bag
+        /// (or its own), whatever that bag takes and however full it is. Callers check.
+        /// </summary>
+        internal void Relocate(ItemStack stack, InventoryBag to, int index)
+        {
+            if (!Contains(stack) || to == null || !bags.Contains(to)) return;
+
+            int previous = stack.Count;
+            stack.Bag.List.Remove(stack);
+            stack.Bag = to;
+            to.List.Insert(Mathf.Clamp(index, 0, to.List.Count), stack);
+            StackChanged?.Invoke(stack, previous);
+        }
+
+        /// <summary>
+        /// For Equipment: the Equipped bag, added (unlimited, id "Equipped") if the inventory has none.
+        /// </summary>
+        internal InventoryBag EnsureEquippedBag()
+        {
+            InventoryBag bag = EquippedBag;
+            if (bag != null) return bag;
+
+            string id = "Equipped";
+            while (GetBag(id) != null) id += "+";
+            bag = new InventoryBag(id) { HoldsEquipped = true };
+            bags.Add(bag);
+            return bag;
+        }
+
         /// <summary>Empties every bag.</summary>
         public void Clear()
         {
@@ -280,8 +357,28 @@ namespace InventorySystem
             if (string.IsNullOrEmpty(bag.OverflowTo)) return null;
 
             InventoryBag next = GetBag(bag.OverflowTo);
-            if (next == null) return null;
+            if (next == null || next.HoldsEquipped) return null;
             return next.IsStorage || next.Accepts(item) ? next : null;
+        }
+
+        /// <summary>Adds to the bag's stacks of the item that have room, making no new ones. Returns how many.</summary>
+        int TopUp(InventoryBag bag, ItemDefinition item, int count)
+        {
+            if (bag == null || !item.Stacks) return 0;
+
+            int left = count;
+            foreach (ItemStack stack in bag.List)
+            {
+                if (left <= 0) break;
+                if (stack.Item != item || stack.Room <= 0) continue;
+
+                int previous = stack.Count;
+                int amount = Mathf.Min(left, stack.Room);
+                stack.Count += amount;
+                left -= amount;
+                StackChanged?.Invoke(stack, previous);
+            }
+            return count - left;
         }
 
         /// <summary>Puts as many as fit into one bag, whatever it takes (callers check). Returns how many.</summary>

@@ -8,6 +8,13 @@
 - `Inventory.Mirror` follows order changes and raises `StackChanged` for stacks that only moved place, so a copy's UI
   redraws.
 - Fix: an equipped item marked Only One Equipped can move to another slot (it used to count itself as already equipped).
+- `Equipment` *Equipped Items Leave The Bag* (off by default): equipping takes the stack out of its bag into a hidden
+  Equipped bag (`InventoryBag.HoldsEquipped`, added to the Inventory if there is none), keeping its InstanceId, so a slot
+  is the item's own place and it frees its bag space. What it replaces goes to the slot it came from, else the space it
+  left, else the first bag with room. Unequipping needs room; `Equipment.UnequipInto(type, index, bag, bagIndex)` puts it
+  at a space, swapping with the stack there when the bag is full. Also on `IInventoryRequests` and `NetworkInventory`.
+- `Inventory.EquippedBag`, `BagWithRoomFor(item)`, `IndexOf(stack)`. `HomeOf` and overflow skip the Equipped bag and
+  `Move` refuses it; `Add` tops up equipped stacks of the item first.
 
 ## [0.3.0] - 2026-11-24
 

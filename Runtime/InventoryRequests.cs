@@ -17,6 +17,9 @@ namespace InventorySystem
         bool Equip(ItemStack stack, EquipSlotType type, int index);
         bool EquipAnywhere(ItemStack stack);
         void Unequip(EquipSlotType type, int index);
+
+        /// <summary>Unequips into a bag at a space, swapping when that bag is full (see Equipment.UnequipInto).</summary>
+        bool UnequipInto(EquipSlotType type, int index, InventoryBag bag, int bagIndex);
         void Select(EquipSlotType type, int index);
         bool Cycle(EquipSlotType type, int direction = 1);
 
@@ -103,6 +106,8 @@ namespace InventorySystem
             public bool Equip(ItemStack stack, EquipSlotType type, int index) => Equipment != null && Equipment.Equip(stack, type, index);
             public bool EquipAnywhere(ItemStack stack) => Equipment != null && Equipment.EquipAnywhere(stack);
             public void Unequip(EquipSlotType type, int index) => Equipment?.Unequip(type, index);
+            public bool UnequipInto(EquipSlotType type, int index, InventoryBag bag, int bagIndex) =>
+                Equipment != null && Equipment.UnequipInto(type, index, bag, bagIndex);
             public void Select(EquipSlotType type, int index) => Equipment?.Select(type, index);
             public bool Cycle(EquipSlotType type, int direction = 1) => Equipment != null && Equipment.Cycle(type, direction);
             public bool UseQuickItem() => Equipment != null && Equipment.UseQuickItem();

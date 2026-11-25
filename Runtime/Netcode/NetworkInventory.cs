@@ -168,6 +168,18 @@ namespace InventorySystem.Netcode
             else if (CanAsk) UnequipRpc(type, index, ++sent);
         }
 
+        public bool UnequipInto(EquipSlotType type, int index, InventoryBag bag, int bagIndex)
+        {
+            if (equipment == null) return false;
+            if (Direct) return equipment.UnequipInto(type, index, bag, bagIndex);
+            EquipSlot slot = equipment.Get(type, index);
+            if (!CanAsk || slot == null || slot.IsEmpty) return false;
+            if (bag != null && (bag.HoldsEquipped || inventory.GetBag(bag.Id) != bag)) return false;
+
+            UnequipIntoRpc(type, index, bag != null ? bag.Id : "", bagIndex, ++sent);
+            return true;
+        }
+
         public void Select(EquipSlotType type, int index)
         {
             if (equipment == null) return;
@@ -234,7 +246,7 @@ namespace InventorySystem.Netcode
         {
             if (Direct) return inventory.Move(stack, to, count);
             if (!CanAsk || !inventory.Contains(stack) || to == null || to == stack.Bag || count <= 0) return 0;
-            if (!to.IsStorage && !to.Accepts(stack.Item)) return 0;
+            if (to.HoldsEquipped || (!to.IsStorage && !to.Accepts(stack.Item))) return 0;
 
             MoveRpc(stack.InstanceId, to.Id, count, ++sent);
             return Mathf.Min(count, stack.Count);
@@ -284,6 +296,17 @@ namespace InventorySystem.Netcode
         void UnequipRpc(EquipSlotType type, int index, int request)
         {
             if (equipment != null) equipment.Unequip(type, index);
+            Handled(request);
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        void UnequipIntoRpc(EquipSlotType type, int index, string bag, int bagIndex, int request)
+        {
+            if (equipment != null)
+            {
+                InventoryBag to = string.IsNullOrEmpty(bag) ? null : inventory.GetBag(bag);
+                if (to != null || string.IsNullOrEmpty(bag)) equipment.UnequipInto(type, index, to, bagIndex);
+            }
             Handled(request);
         }
 

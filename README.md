@@ -33,7 +33,9 @@ particle effect...). Effects are `[Serializable]` classes chosen with the list's
 - **Equipment** (next to Inventory, and a StatSheet if the character has stats): slot counts per type in *Layout*,
   starting equipment, optional attunement and equip-weight stats. `Equip`, `EquipAnywhere`, `Unequip`, `Select`,
   `Cycle(type, direction)`, `UseQuickItem()`, `InHand(hand)`, `SlotChanged`, `SelectionChanged` and `HeldChanged`
-  events, `Capture()` / `Restore(snapshot)` (restore the inventory first). In effect: armour and rings while equipped,
+  events, `Capture()` / `Restore(snapshot)` (restore the inventory first). With *Equipped Items Leave The Bag* on, an
+  equipped item is taken out of its bag (into a hidden Equipped bag) so it no longer takes a bag space; unequipping
+  needs room (`UnequipInto` puts it at a given space, swapping when the bag is full). In effect: armour and rings while equipped,
   the selected weapon of each hand, the selected spell. Nothing reads input: your input code calls Cycle and UseQuickItem.
   `StowHands(source)` / `UnstowHands(source)` put both hands' weapons away (while carrying something, say) without
   changing slots; it isn't synced, so on a networked character call it on every copy from shared state.

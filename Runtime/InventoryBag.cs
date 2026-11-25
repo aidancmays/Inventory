@@ -12,6 +12,9 @@ namespace InventorySystem
     ///
     /// What does not fit can go on to another bag (Overflow To), e.g. into a Storage bag like the bottomless box.
     /// Items in a Storage bag can't be equipped or used, and it only gets items that overflow or are moved into it.
+    ///
+    /// An Equipped bag holds what Equipment has equipped when its Equipped Items Leave The Bag is on (Equipment adds
+    /// one if there is none). Items only get there by being equipped, and UI should not show it as a bag.
     /// </summary>
     [Serializable]
     public class InventoryBag
@@ -38,6 +41,10 @@ namespace InventorySystem
         [Tooltip("Id of the bag that gets what does not fit here. Empty = what does not fit is refused.")]
         [SerializeField] string overflowTo;
 
+        [Tooltip("Holds what Equipment has equipped, when its Equipped Items Leave The Bag is on. Items only get here by " +
+                 "being equipped; pickups and moves never put anything here. Leave it unlimited.")]
+        [SerializeField] bool equipped;
+
         [NonSerialized] List<ItemStack> stacks;
 
         public string Id => id;
@@ -49,6 +56,13 @@ namespace InventorySystem
 
         public bool IsStorage => storage;
         public string OverflowTo => overflowTo;
+
+        /// <summary>The bag equipped items are kept in (see Equipment.EquippedItemsLeaveTheBag). Not a bag to show.</summary>
+        public bool HoldsEquipped
+        {
+            get => equipped;
+            internal set => equipped = value;
+        }
 
         public IReadOnlyList<ItemStack> Stacks => List;
         public int UsedSpaces => List.Count;
