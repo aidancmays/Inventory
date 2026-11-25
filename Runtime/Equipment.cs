@@ -39,6 +39,12 @@ namespace InventorySystem
             [Tooltip("Off: no armour slots (e.g. for a creature).")]
             public bool armor = true;
 
+            [Tooltip("Which armour slots there are (with Armor on).")]
+            public bool head = true;
+            public bool chest = true;
+            public bool hands = true;
+            public bool legs = true;
+
             public int CountOf(EquipSlotType type)
             {
                 switch (type)
@@ -48,6 +54,10 @@ namespace InventorySystem
                     case EquipSlotType.Ring: return rings;
                     case EquipSlotType.QuickItem: return quickItems;
                     case EquipSlotType.Spell: return spells;
+                    case EquipSlotType.Head: return armor && head ? 1 : 0;
+                    case EquipSlotType.Chest: return armor && chest ? 1 : 0;
+                    case EquipSlotType.Hands: return armor && hands ? 1 : 0;
+                    case EquipSlotType.Legs: return armor && legs ? 1 : 0;
                     default: return armor ? 1 : 0;
                 }
             }

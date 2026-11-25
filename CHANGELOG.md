@@ -13,6 +13,7 @@
   is the item's own place and it frees its bag space. What it replaces goes to the slot it came from, else the space it
   left, else the first bag with room. Unequipping needs room; `Equipment.UnequipInto(type, index, bag, bagIndex)` puts it
   at a space, swapping with the stack there when the bag is full. Also on `IInventoryRequests` and `NetworkInventory`.
+- Equipment *Layout*: Head, Chest, Hands and Legs switches, to leave out single armour slots.
 - `Inventory.EquippedBag`, `BagWithRoomFor(item)`, `IndexOf(stack)`. `HomeOf` and overflow skip the Equipped bag and
   `Move` refuses it; `Add` tops up equipped stacks of the item first.
 
